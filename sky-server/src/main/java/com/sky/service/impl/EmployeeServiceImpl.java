@@ -82,14 +82,11 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setUpdateTime(LocalDateTime.now());
 
         // 设置当前记录创建人id和修改人id（先写死，后面从ThreadLocal获取）
-        employee.setCreateUser(1L);
-        employee.setUpdateUser(1L);
+        //TODO
+       // employee.setCreateUser(1L);
+        //employee.setUpdateUser(1L);
 
         employeeMapper.insert(employee);
     }
 
-    @Override
-    public Employee login(EmployeeDTO employeeDTO) {
-        return null;
-    }
 }

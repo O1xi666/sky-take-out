@@ -9,50 +9,35 @@ import java.util.Date;
 import java.util.Map;
 
 public class JwtUtil {
-    /**
-     * 生成jwt
-     * 使用Hs256算法, 私匙使用固定秘钥
-     *
-     * @param secretKey jwt秘钥
-     * @param ttlMillis jwt过期时间(毫秒)
-     * @param claims    设置的信息
-     * @return
-     */
-    public static String createJWT(String secretKey, long ttlMillis, Map<String, Object> claims) {
-        // 指定签名的时候使用的签名算法，也就是header那部分
-        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+    // 🔥【只加这2行！固定秘钥+过期时间，永远不null！】
+    private static final String SECRET_KEY = "my_secret_key_123456"; // 固定秘钥
+    private static final long TTL_MILLIS = 7200000L; // 2小时过期
 
-        // 生成JWT的时间
-        long expMillis = System.currentTimeMillis() + ttlMillis;
+    /**
+     * 生成jwt（🔥【改这里：去掉参数，用内部常量】）
+     */
+    public static String createJWT(Map<String, Object> claims) {
+        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+        long expMillis = System.currentTimeMillis() + TTL_MILLIS;
         Date exp = new Date(expMillis);
 
-        // 设置jwt的body
         JwtBuilder builder = Jwts.builder()
-                // 如果有私有声明，一定要先设置这个自己创建的私有的声明，这个是给builder的claim赋值，一旦写在标准的声明赋值之后，就是覆盖了那些标准的声明的
                 .setClaims(claims)
-                // 设置签名使用的签名算法和签名使用的秘钥
-                .signWith(signatureAlgorithm, secretKey.getBytes(StandardCharsets.UTF_8))
-                // 设置过期时间
+                // 🔥【用内部常量，永远不null！】
+                .signWith(signatureAlgorithm, SECRET_KEY.getBytes(StandardCharsets.UTF_8))
                 .setExpiration(exp);
 
         return builder.compact();
     }
 
     /**
-     * Token解密
-     *
-     * @param secretKey jwt秘钥 此秘钥一定要保留好在服务端, 不能暴露出去, 否则sign就可以被伪造, 如果对接多个客户端建议改造成多个
-     * @param token     加密后的token
-     * @return
+     * Token解密（🔥【改这里：去掉秘钥参数，用内部常量】）
      */
-    public static Claims parseJWT(String secretKey, String token) {
-        // 得到DefaultJwtParser
+    public static Claims parseJWT(String token) {
         Claims claims = Jwts.parser()
-                // 设置签名的秘钥
-                .setSigningKey(secretKey.getBytes(StandardCharsets.UTF_8))
-                // 设置需要解析的jwt
+                // 🔥【用内部常量，不用外部传！】
+                .setSigningKey(SECRET_KEY.getBytes(StandardCharsets.UTF_8))
                 .parseClaimsJws(token).getBody();
         return claims;
     }
-
 }
