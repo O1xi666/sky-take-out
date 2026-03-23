@@ -6,7 +6,12 @@ sky:
     database: sky_take_out
     username: root
     password: 23009201435
+
   redis:
     host: localhost
     port: 6379
     database: 10
+  ai:
+    qwen:
+      api-key: sk-2fd1137b23fd4f51988a7d5cdf96b733
+      base-url: https://dashscope.aliyuncs.com/api/v1

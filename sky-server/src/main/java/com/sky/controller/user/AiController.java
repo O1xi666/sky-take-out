@@ -5,7 +5,13 @@ import com.sky.utils.QwenUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Value;
+
+import javax.annotation.PostConstruct;
 
 /**
  * AI 智能服务控制器
@@ -17,15 +23,14 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class AiController {
 
-    // === 模拟数据区 (Mock Data) ===
-    // 面试话术：实际生产中这里会调用 DishService 获取动态数据，演示环境使用静态配置以突出 AI 逻辑
+    // === 🔴 补全这里：模拟数据区 (Mock Data) ===
     private static final String MOCK_MENU =
-            "1. 宫保鸡丁 (28元, 辣, 鸡肉, 热销)\n" +
-                    "2. 麻婆豆腐 (18元, 辣, 豆制品, 实惠)\n" +
-                    "3. 清炒时蔬 (15元, 清淡, 蔬菜, 健康)\n" +
-                    "4. 水煮鱼 (68元, 特辣, 鱼肉, 招牌)\n" +
-                    "5. 番茄鸡蛋盖饭 (22元, 微甜, 家常, 快速)\n" +
-                    "6. 红烧肉 (35元, 甜咸, 猪肉, 经典)";
+            "1. 宫保鸡丁 (28 元，辣，鸡肉，热销)\n" +
+                    "2. 麻婆豆腐 (18 元，辣，豆制品，实惠)\n" +
+                    "3. 清炒时蔬 (15 元，清淡，蔬菜，健康)\n" +
+                    "4. 水煮鱼 (68 元，特辣，鱼肉，招牌)\n" +
+                    "5. 番茄鸡蛋盖饭 (22 元，微甜，家常，快速)\n" +
+                    "6. 红烧肉 (35 元，甜咸，猪肉，经典)";
 
     private static final String MOCK_ORDER_STATS =
             "【昨日经营日报】\n" +
@@ -36,6 +41,19 @@ public class AiController {
                     "- 热销 Top1: 宫保鸡丁 (42 份)\n" +
                     "- 滞销 Top1: 清炒时蔬 (5 份)";
 
+
+    @Value("${sky.ai.api-key:}")
+    private String configApiKey;
+
+    @PostConstruct
+    public void init() {
+        if (configApiKey != null && !configApiKey.isEmpty()) {
+            QwenUtil.setApiKey(configApiKey);
+            log.info("✅ AI 初始化成功：Key 已加载");
+        } else {
+            log.error("❌ AI 初始化失败：未找到 sky.ai.api-key");
+        }
+    }
     @GetMapping("/recommend")
     @ApiOperation("AI 智能点餐推荐")
     public Result<String> recommend(@RequestParam String preference) {
@@ -64,5 +82,11 @@ public class AiController {
         String reply = QwenUtil.chat(prompt);
         String htmlReply = reply.replace("\n", "<br>");
         return Result.success(htmlReply);
+    }
+    @GetMapping("/page")
+    @ApiOperation("跳转到点餐页面")
+    public String toOrderPage() {
+        // 返回字符串对应 src/main/resources/templates/ai-order.html
+        return "ai-order";
     }
 }

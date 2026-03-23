@@ -17,41 +17,37 @@ spring:
     port: ${sky.redis.port}
     database: ${sky.redis.database}
 
-
-
-
-
-  mybatis:
-    configuration:
-      #开启驼峰命名
-      map-underscore-to-camel-case: true
-  #mapper配置文件
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.sky.entity
-  configuration:
-    #开启驼峰命名
-    map-underscore-to-camel-case: true
 
 logging:
   level:
-    com:
-      sky:
-        mapper: debug
-        service: info
-        controller: info
+    com.sky:
+      mapper: debug
+      service: info
+      controller: info
+    # 👇 注意缩进！不要缩进到 com.sky 里面去
+    org.springframework.web.servlet: DEBUG
+    org.springframework.web.servlet.resource: DEBUG
 
-  sky:
-    datasource:
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      host: localhost
-      port: 3306
-      database: sky_take_out
-      username: root
-      password: 23009201435
+
+sky:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    host: localhost
+    port: 3306
+    database: sky_take_out
+    username: root
+    password: 23009201435
+  ai:
+    qwen:
+      api-key: ${AI_QWEN_API_KEY:default-fake-key}
+      base-url: ${AI_QWEN_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
+
   jwt:
-    # 设置jwt签名加密时使用的秘钥
     admin-secret-key: itcast
-    # 设置jwt过期时间
     admin-ttl: 7200000
-    # 设置前端传递过来的令牌名称
     admin-token-name: token

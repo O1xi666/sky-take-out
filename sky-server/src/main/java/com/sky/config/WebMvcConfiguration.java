@@ -61,8 +61,19 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
      * 设置静态资源映射
      * @param registry
      */
+    @Override // 建议加上 @Override 注解
     protected void addResourceHandlers(ResourceHandlerRegistry registry) {
+        System.out.println(">>>>>>>>>> [DEBUG] 开始执行 addResourceHandlers 配置...");
+        // 👇【新增】恢复 Spring Boot 默认的静态资源映射
+        registry.addResourceHandler("/**")
+                .addResourceLocations(
+                        "classpath:/static/",
+                        "classpath:/public/",
+                        "classpath:/resources/",
+                        "classpath:/META-INF/resources/"
+                );
+
+        System.out.println(">>>>>>>>>> [DEBUG] 静态资源配置完成！");
         registry.addResourceHandler("/doc.html").addResourceLocations("classpath:/META-INF/resources/");
         registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
-    }
-}
+    }}
