@@ -1,9 +1,6 @@
 package com.sky.utils;
 
-import com.aliyun.oss.ClientException;
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSClientBuilder;
-import com.aliyun.oss.OSSException;
+import com.aliyun.oss.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +25,17 @@ public class AliOssUtil {
      */
     public String upload(byte[] bytes, String objectName) {
 
-        // 创建OSSClient实例。
-        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+
+        ClientBuilderConfiguration config = new ClientBuilderConfiguration();
+        // 连接超时：10秒
+        config.setConnectionTimeout(10 * 1000);
+        // 读取/传输超时：20秒
+        config.setSocketTimeout(20 * 1000);
+        // 请求超时：30秒
+        config.setRequestTimeout(30 * 1000);
+        OSS ossClient = new OSSClientBuilder()
+                .build(endpoint, accessKeyId, accessKeySecret, config);
+
 
         try {
             // 创建PutObject请求。

@@ -10,8 +10,12 @@ sky:
   redis:
     host: localhost
     port: 6379
-    database: 10
+    database: 0
+  cache:
+    redis:
+      time-to-live: 3600000  # 1小时 = 3600秒 = 3600000毫秒（推荐！）
+      cache-null-values: false  # 不缓存空结果，避免浪费内存
   ai:
     qwen:
-      api-key: sk-2fd1137b23fd4f51988a7d5cdf96b733
+      api-key: sk-1c15fba4791d4101a9c90fd5c97a7f51
       base-url: https://dashscope.aliyuncs.com/api/v1

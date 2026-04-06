@@ -1,7 +1,11 @@
+# 忽略开发环境配置文件
+src/main/resources/application-dev.yml
+sky-server/src/main/resources/application-dev.yml   # 如果项目在子模块里
+
+# 其他常见忽略项
 **/target/
-.idea
+.idea/
 *.iml
 *.class
 *Test.java
 **/test/
-src/main/resources/application-dev.yml

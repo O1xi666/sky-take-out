@@ -6,10 +6,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.cache.annotation.EnableCaching;
 
 @SpringBootApplication
 @EnableTransactionManagement //开启注解方式的事务管理
 @Slf4j
+@EnableCaching
+@EnableAsync
 public class SkyApplication {
     public static void main(String[] args) {
         // 启动项目并获取上下文（核心修改：把原来的一行拆成两行，获取上下文对象）
@@ -29,4 +33,5 @@ public class SkyApplication {
         // 保留你原来的日志
         log.info("server started");
     }
+
 }
