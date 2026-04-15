@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 @RestController
 @RequestMapping("/user/dish")
@@ -26,5 +27,11 @@ public class UserDishController {
     @ApiOperation("根据id查询菜品")
     public Result<Dish> getById(@PathVariable Long id) {
         return Result.success(dishService.getById(id));
+    }
+
+    @GetMapping("/list")
+    @ApiOperation("查询菜品列表")
+    public Result<List<Dish>> list() {
+        return Result.success(dishService.listForUser());
     }
 }

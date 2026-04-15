@@ -8,6 +8,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import java.io.Serializable;
+import java.util.List;
 
 @Service
 public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements DishService {
@@ -21,10 +22,19 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         return super.getById(id);
     }
 
+    @Override
+    @Cacheable(value = "dishCache", key = "'user:list'")
+    public List<Dish> listForUser() {
+        return lambdaQuery()
+                .eq(Dish::getStatus, 1)
+                .orderByDesc(Dish::getUpdateTime)
+                .list();
+    }
+
     /**
      * 修改菜品 → 先更库 → 自动删缓存
      */
-    @CacheEvict(value = "dishCache", key = "#dish.id")
+    @CacheEvict(value = "dishCache", allEntries = true)
     @Override
     public boolean updateById(Dish dish) {
         return super.updateById(dish);
