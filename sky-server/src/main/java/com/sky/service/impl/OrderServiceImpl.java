@@ -20,11 +20,14 @@ import com.sky.mapper.DishMapper;
 import com.sky.mapper.OrderDetailMapper;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.ShoppingCartMapper;
+import com.sky.mq.OrderFlashMessage;
+import com.sky.mq.OrderFlashMessage.OrderDetailItem;
 import com.sky.result.PageResult;
 import com.sky.service.OrderService;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
@@ -36,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -61,13 +65,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
     public OrderServiceImpl() {
         deductStockScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("lua/deduct_stock.lua")));
         deductStockScript.setResultType(Long.class);
     }
 
+    /**
+     * 秒杀下单：Redis+Lua 预扣减 → MQ 异步落库
+     */
     @Override
-    @Transactional
     public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO) {
         Long userId = BaseContext.getCurrentId();
         List<ShoppingCart> cartList = shoppingCartMapper.listByUserId(userId);
@@ -88,13 +97,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                     .image(cart.getImage())
                     .build());
         }
-        OrderSubmitVO vo = createOrderWithStockCheck(ordersSubmitDTO, orderDetails, userId);
+        OrderSubmitVO vo = processFlashOrder(ordersSubmitDTO, orderDetails, userId);
         shoppingCartMapper.deleteBatchByIds(cartIds);
         return vo;
     }
 
+    /**
+     * 购物车批量秒杀下单
+     */
     @Override
-    @Transactional
     public OrderSubmitVO submitCartOrder(OrdersSubmitDTO ordersSubmitDTO, List<Long> cartIds) {
         if (cartIds == null || cartIds.isEmpty()) {
             throw new BusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
@@ -116,18 +127,23 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                     .image(cart.getImage())
                     .build());
         }
-        OrderSubmitVO vo = createOrderWithStockCheck(ordersSubmitDTO, orderDetails, userId);
+        OrderSubmitVO vo = processFlashOrder(ordersSubmitDTO, orderDetails, userId);
         shoppingCartMapper.deleteBatchByIds(cartIds);
         return vo;
     }
 
-    private OrderSubmitVO createOrderWithStockCheck(OrdersSubmitDTO ordersSubmitDTO, List<OrderDetail> details, Long userId) {
+    /**
+     * 秒杀下单核心：Redis+Lua 预扣减 → MQ 异步落库
+     */
+    private OrderSubmitVO processFlashOrder(OrdersSubmitDTO ordersSubmitDTO, List<OrderDetail> details, Long userId) {
         AddressBook addressBook = addressBookMapper.getById(ordersSubmitDTO.getAddressBookId());
         if (addressBook == null) {
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
         }
 
+        // Step 1: Lua 原子扣减 Redis 库存
         Map<Long, Integer> deductedCache = new HashMap<>();
+        Long merchantId = null;
         try {
             for (OrderDetail detail : details) {
                 Dish dish = dishMapper.selectById(detail.getDishId());
@@ -145,21 +161,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                         stock.toString()
                 );
                 if (luaResult == null || luaResult < 0) {
-                    throw new BusinessException("菜品库存不足: " + dish.getName());
+                    throw new BusinessException("库存不足: " + dish.getName());
                 }
-                deductedCache.put(dish.getId(), deductedCache.getOrDefault(dish.getId(), 0) + detail.getNumber());
-            }
-
-            for (Map.Entry<Long, Integer> entry : deductedCache.entrySet()) {
-                Long dishId = entry.getKey();
-                Integer qty = entry.getValue();
-                int updated = dishMapper.update(null,
-                        Wrappers.<Dish>lambdaUpdate()
-                                .setSql("stock = stock - " + qty)
-                                .eq(Dish::getId, dishId)
-                                .ge(Dish::getStock, qty));
-                if (updated == 0) {
-                    throw new BusinessException("库存同步到MySQL失败，已拦截下单");
+                deductedCache.put(dish.getId(),
+                        deductedCache.getOrDefault(dish.getId(), 0) + detail.getNumber());
+                if (merchantId == null) {
+                    merchantId = dish.getMerchantId();
                 }
             }
         } catch (RuntimeException ex) {
@@ -167,47 +174,83 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             throw ex;
         }
 
-        Orders orders = new Orders();
-        BeanUtils.copyProperties(ordersSubmitDTO, orders);
-        orders.setUserId(userId);
-        orders.setOrderTime(LocalDateTime.now());
-        orders.setCheckoutTime(LocalDateTime.now());
-        orders.setStatus(Orders.TO_BE_CONFIRMED);
-        orders.setPayStatus(Orders.PAID);
-        orders.setNumber(generateSimpleOrderNo());
-        orders.setPhone(addressBook.getPhone());
-        orders.setConsignee(addressBook.getConsignee());
-        orders.setAddress(addressBook.getProvinceName() + addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
-
+        // Step 2: 计算总金额
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderDetail detail : details) {
             totalAmount = totalAmount.add(detail.getAmount().multiply(new BigDecimal(detail.getNumber())));
         }
-        orders.setAmount(totalAmount);
-        orderMapper.insert(orders);
 
-        for (OrderDetail detail : details) {
-            detail.setOrderId(orders.getId());
+        // Step 3: 发送 MQ 消息（消费者异步写入 MySQL）
+        String orderNumber = generateOrderNumber();
+        OrderFlashMessage msg = buildFlashMessage(orderNumber, userId, merchantId,
+                ordersSubmitDTO, addressBook, totalAmount, details);
+
+        try {
+            log.info("发送 MQ 消息 - 订单号: {}", orderNumber);
+            rabbitTemplate.convertAndSend("order.flash.queue", msg);
+        } catch (Exception e) {
+            log.error("MQ 发送失败，回滚 Redis 库存", e);
+            rollbackRedisStock(deductedCache);
+            throw new BusinessException("下单繁忙，请稍后重试");
         }
-        orderDetailMapper.insertBatch(details);
+
+        // Step 4: 立即返回（MySQL 写交由 MQ 消费者异步完成）
         return OrderSubmitVO.builder()
-                .id(orders.getId())
-                .orderTime(orders.getOrderTime())
-                .orderNumber(orders.getNumber())
-                .orderAmount(orders.getAmount())
+                .orderNumber(orderNumber)
+                .orderAmount(totalAmount)
+                .orderTime(LocalDateTime.now())
                 .build();
     }
 
+    /** Redis 预扣减失败时回滚 */
     private void rollbackRedisStock(Map<Long, Integer> deductedCache) {
         for (Map.Entry<Long, Integer> entry : deductedCache.entrySet()) {
             redisTemplate.opsForValue().increment(STOCK_KEY_PREFIX + entry.getKey(), entry.getValue());
         }
     }
 
-    private String generateSimpleOrderNo() {
+    /** 生成唯一订单号 */
+    private String generateOrderNumber() {
         int random = new Random().nextInt(9000) + 1000;
         return System.currentTimeMillis() + String.valueOf(random);
     }
+
+    /** 构建 MQ 消息体 */
+    private OrderFlashMessage buildFlashMessage(String orderNumber, Long userId, Long merchantId,
+                                                 OrdersSubmitDTO dto, AddressBook addressBook,
+                                                 BigDecimal totalAmount, List<OrderDetail> details) {
+        List<OrderDetailItem> items = details.stream()
+                .map(d -> OrderDetailItem.builder()
+                        .dishId(d.getDishId())
+                        .name(d.getName())
+                        .dishFlavor(d.getDishFlavor())
+                        .number(d.getNumber())
+                        .amount(d.getAmount())
+                        .image(d.getImage())
+                        .setmealId(d.getSetmealId())
+                        .build())
+                .collect(Collectors.toList());
+
+        String fullAddress = addressBook.getProvinceName()
+                + (addressBook.getCityName() != null ? addressBook.getCityName() : "")
+                + (addressBook.getDistrictName() != null ? addressBook.getDistrictName() : "")
+                + (addressBook.getDetail() != null ? addressBook.getDetail() : "");
+
+        return OrderFlashMessage.builder()
+                .orderNumber(orderNumber)
+                .userId(userId)
+                .addressBookId(dto.getAddressBookId())
+                .amount(totalAmount)
+                .remark(dto.getRemark())
+                .phone(addressBook.getPhone())
+                .consignee(addressBook.getConsignee())
+                .address(fullAddress)
+                .merchantId(merchantId)
+                .orderDetails(items)
+                .build();
+    }
+
+    // ==================== 以下方法保持原有逻辑不变 ====================
 
     @Override
     public PageResult pageQuery4User(OrdersPageQueryDTO ordersPageQueryDTO) {

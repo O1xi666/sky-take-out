@@ -48,6 +48,7 @@ public class EmployeeController {
         //登录成功后，生成jwt令牌
         Map<String, Object> claims = new HashMap<>();
         claims.put(JwtClaimsConstant.EMP_ID, employee.getId());
+        claims.put(JwtClaimsConstant.MERCHANT_ID, employee.getMerchantId());
         String token = JwtUtil.createJWT(claims);
 
         EmployeeLoginVO employeeLoginVO = EmployeeLoginVO.builder()

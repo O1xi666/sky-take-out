@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 订单
+ * 璁㈠崟
  */
 @Data
 @Builder
@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 public class Orders implements Serializable {
 
     /**
-     * 订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+     * 璁㈠崟鐘舵€?1寰呬粯娆?2寰呮帴鍗?3宸叉帴鍗?4娲鹃€佷腑 5宸插畬鎴?6宸插彇娑?
      */
     public static final Integer PENDING_PAYMENT = 1;
     public static final Integer TO_BE_CONFIRMED = 2;
@@ -29,7 +29,7 @@ public class Orders implements Serializable {
     public static final Integer CANCELLED = 6;
 
     /**
-     * 支付状态 0未支付 1已支付 2退款
+     * 鏀粯鐘舵€?0鏈敮浠?1宸叉敮浠?2閫€娆?
      */
     public static final Integer UN_PAID = 0;
     public static final Integer PAID = 1;
@@ -39,72 +39,75 @@ public class Orders implements Serializable {
 
     private Long id;
 
-    //订单号
+    //璁㈠崟鍙?
     private String number;
 
-    //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消 7退款
+    //璁㈠崟鐘舵€?1寰呬粯娆?2寰呮帴鍗?3宸叉帴鍗?4娲鹃€佷腑 5宸插畬鎴?6宸插彇娑?7閫€娆?
     private Integer status;
 
-    //下单用户id
+    //涓嬪崟鐢ㄦ埛id
     private Long userId;
 
-    //地址id
+    //鍦板潃id
     private Long addressBookId;
 
-    //下单时间
+    //涓嬪崟鏃堕棿
     private LocalDateTime orderTime;
 
-    //结账时间
+    //缁撹处鏃堕棿
     private LocalDateTime checkoutTime;
 
-    //支付方式 1微信，2支付宝
+    //鏀粯鏂瑰紡 1寰俊锛?鏀粯瀹?
     private Integer payMethod;
 
-    //支付状态 0未支付 1已支付 2退款
+    //鏀粯鐘舵€?0鏈敮浠?1宸叉敮浠?2閫€娆?
     private Integer payStatus;
 
-    //实收金额
+    //瀹炴敹閲戦
     private BigDecimal amount;
 
-    //备注
+    //澶囨敞
     private String remark;
 
-    //用户名
+    //鐢ㄦ埛鍚?
     private String userName;
 
-    //手机号
+    //鎵嬫満鍙?
     private String phone;
 
-    //地址
+    //鍦板潃
     private String address;
 
-    //收货人
+    //鏀惰揣浜?
     private String consignee;
 
-    //订单取消原因
+    //璁㈠崟鍙栨秷鍘熷洜
     private String cancelReason;
 
-    //订单拒绝原因
+    //璁㈠崟鎷掔粷鍘熷洜
     private String rejectionReason;
 
-    //订单取消时间
+    //璁㈠崟鍙栨秷鏃堕棿
     private LocalDateTime cancelTime;
 
-    //预计送达时间
+    //棰勮閫佽揪鏃堕棿
     private LocalDateTime estimatedDeliveryTime;
 
-    //配送状态  1立即送出  0选择具体时间
+    //閰嶉€佺姸鎬? 1绔嬪嵆閫佸嚭  0閫夋嫨鍏蜂綋鏃堕棿
     private Integer deliveryStatus;
 
-    //送达时间
+    //閫佽揪鏃堕棿
     private LocalDateTime deliveryTime;
 
-    //打包费
+    //鎵撳寘璐?
     private int packAmount;
 
-    //餐具数量
+    //椁愬叿鏁伴噺
     private int tablewareNumber;
 
-    //餐具数量状态  1按餐量提供  0选择具体数量
+    //椁愬叿鏁伴噺鐘舵€? 1鎸夐閲忔彁渚? 0閫夋嫨鍏蜂綋鏁伴噺
     private Integer tablewareStatus;
+
+    //所属商家ID
+    private Long merchantId;
 }

@@ -8,40 +8,28 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * 商家
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Employee implements Serializable {
+public class Merchant implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     private Long id;
 
-    private Long merchantId;
-
-    private String username;
-
     private String name;
-
-    private String password;
 
     private String phone;
 
-    private String sex;
-
-    private String idNumber;
+    private String address;
 
     private Integer status;
 
-    //@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    //@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
-
-    private Long createUser;
-
-    private Long updateUser;
-
 }

@@ -34,7 +34,7 @@ public class CUserAuthServiceImpl implements CUserAuthService {
 
         User user = User.builder()
                 .name(userRegisterDTO.getUsername())
-                .idNumber(md5(userRegisterDTO.getPassword()))
+                .password(md5(userRegisterDTO.getPassword()))
                 .createTime(LocalDateTime.now())
                 .build();
         cUserAuthMapper.insert(user);

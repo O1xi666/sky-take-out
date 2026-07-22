@@ -25,7 +25,7 @@ public interface OrderService {
 
     /**
      * 用户端：查询订单详情
-     * @param ordersDTO
+     * @param id
      * @return
      */
     OrderVO orderDetail(Long id);

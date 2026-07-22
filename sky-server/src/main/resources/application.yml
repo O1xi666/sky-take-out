@@ -13,9 +13,22 @@ spring:
       username: ${sky.datasource.username}
       password: ${sky.datasource.password}
   redis:
-    host: ${sky.redis.host}
-    port: ${sky.redis.port}
-    database: ${sky.redis.database}
+   host: ${sky.redis.host}
+   port: ${sky.redis.port}
+   database: ${sky.redis.database}
+  rabbitmq:
+    host: localhost
+    port: 5672
+    virtual-host: /
+    username: guest
+    password: guest
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2.0
 
 mybatis:
   configuration:
@@ -41,7 +54,7 @@ sky:
     port: 3306
     database: sky_take_out
     username: root
-    password: 23009201435
+    password: ${SKY_DB_PASSWORD:please-set-in-application-dev.yml}
   ai:
     qwen:
       api-key: ${AI_QWEN_API_KEY:default-fake-key}

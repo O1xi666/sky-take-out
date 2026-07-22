@@ -12,9 +12,17 @@ import java.io.Serializable;
 @NoArgsConstructor
 @Builder
 public class GoodsSalesDTO implements Serializable {
-    //商品名称
+    //鍟嗗搧鍚嶇О
     private String name;
 
-    //销量
+    //閿€閲?
     private Integer number;
+
+    //菜品ID
+    private Long dishId;
+
+    //商家ID
+    private Long merchantId;
 }
+
+
